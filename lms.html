@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neerada LMS Upload Tracker</title>
+    <!-- Dynamic Favicons -->
+    <link id="dynamic-favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>☁️</text></svg>">
+    <link id="dynamic-apple-icon" rel="apple-touch-icon" href="">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .checkbox-custom:checked + div {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .checkbox-custom:checked + div svg { display: block; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col relative">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-50 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i>
+        <p class="text-slate-500 font-medium animate-pulse">Connecting to Firebase...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md z-40 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            
+            <!-- Logo Upload & Title -->
+            <div class="flex items-center space-x-3 group relative cursor-pointer" onclick="document.getElementById('logoUpload').click()" title="Click to upload Neerada Logo">
+                <img id="appLogo" src="" alt="Neerada Logo" class="h-10 w-10 object-contain hidden bg-white rounded-full p-0.5 shadow-sm">
+                <i id="appIcon" class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                <h1 class="text-xl font-bold tracking-tight hidden sm:block">Neerada LMS Tracker</h1>
+                
+                <input type="file" id="logoUpload" accept="image/png, image/jpeg, image/gif, image/webp" class="hidden" onchange="window.handleLogoUpload(event)">
+                <div class="absolute -bottom-10 left-0 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap shadow-lg pointer-events-none">
+                    Upload App Logo
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div>
+                <button onclick="window.resetAllData()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Reset Tracker</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex flex-col lg:flex-row gap-8 opacity-0 transition-opacity duration-500" id="mainContent">
+        
+        <!-- Left Column: Tracker Area -->
+        <div class="w-full lg:w-2/3 flex flex-col space-y-4">
+            
+            <!-- Campus Tabs -->
+            <div class="bg-slate-200 p-1.5 rounded-xl flex space-x-1" id="campusTabs">
+                <!-- Rendered via JS -->
+            </div>
+
+            <!-- Grade Tabs -->
+            <div class="bg-white p-2 rounded-xl shadow-sm flex overflow-x-auto space-x-2 border border-slate-200 mt-2" id="gradeTabs">
+                <!-- Tabs rendered via JS -->
+            </div>
+
+            <!-- Header for active grade -->
+            <div class="flex justify-between items-end border-b border-slate-200 pb-2 pt-4">
+                <h2 id="activeGradeTitle" class="text-2xl font-bold text-slate-700">P1 Classes</h2>
+                <div class="text-sm text-slate-500 font-medium" id="gradeProgress">
+                    0 / 0 Uploaded
+                </div>
+            </div>
+
+            <!-- Class Cards Container -->
+            <div id="classCardsContainer" class="space-y-4">
+                <!-- Class cards rendered via JS -->
+            </div>
+
+        </div>
+
+        <!-- Right Column: Pending Summary -->
+        <div class="w-full lg:w-1/3">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 sticky top-8 flex flex-col h-[calc(100vh-12rem)] max-h-[800px]">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 rounded-t-xl flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i>
+                        Pending Uploads
+                    </h3>
+                    <span id="totalPendingCount" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full">
+                        0 Pending
+                    </span>
+                </div>
+                
+                <div id="pendingListContainer" class="p-5 overflow-y-auto flex-grow space-y-6">
+                    <!-- Pending items rendered via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto shadow-inner">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 text-center text-sm text-slate-500 font-medium">
+            &copy; <span id="copyrightYear"></span> Neerada. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Firebase SDK (Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 1. Configuration & Data Structure ---
+        const P1_P3_SUBJECTS = ['Science', 'Values Education', 'Mathematics', 'Lao Language', 'English', 'Transcription'];
+        const P4_P5_SUBJECTS = ['Science', 'Values', 'Civic', 'Mathematics', 'Lao Language', 'English'];
+
+        const SCHOOL_STRUCTURE = {
+            'Sibounheuang': {
+                'P1': { classes: ['P1A', 'P1B', 'P1C', 'P1D', 'P1E', 'P1F', 'P1G'], subjects: P1_P3_SUBJECTS },
+                'P2': { classes: ['P2A', 'P2B', 'P2C', 'P2D', 'P2E', 'P2F', 'P2G'], subjects: P1_P3_SUBJECTS },
+                'P3': { classes: ['P3A', 'P3B', 'P3C', 'P3D', 'P3E', 'P3F', 'P3G'], subjects: P1_P3_SUBJECTS },
+                'P4': { classes: ['P4A', 'P4B', 'P4C', 'P4D', 'P4E', 'P4F'], subjects: P4_P5_SUBJECTS },
+                'P5': { classes: ['P5A', 'P5B', 'P5C', 'P5D', 'P5E', 'P5F'], subjects: P4_P5_SUBJECTS }
+            },
+            'Chommany': {
+                'P1': { classes: ['P1A', 'P1B'], subjects: P1_P3_SUBJECTS },
+                'P2': { classes: ['P2A', 'P2B'], subjects: P1_P3_SUBJECTS },
+                'P3': { classes: ['P3A'], subjects: P1_P3_SUBJECTS },
+                'P4': { classes: ['P4A'], subjects: P4_P5_SUBJECTS },
+                'P5': { classes: ['P5A'], subjects: P4_P5_SUBJECTS }
+            }
+        };
+
+        // UI State Variables
+        let appState = null;
+        let activeCampus = 'Sibounheuang';
+        let activeGrade = 'P1';
+
+        // Dynamic Copyright Year
+        document.getElementById('copyrightYear').textContent = new Date().getFullYear();
+
+        // --- 2. Firebase Setup ---
+        
+        // User's provided Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuZE29XjC7wSbHVlSFgC2pPd3C5XeGGio",
+            authDomain: "neerada-lowerprimary.firebaseapp.com",
+            projectId: "neerada-lowerprimary",
+            storageBucket: "neerada-lowerprimary.firebasestorage.app",
+            messagingSenderId: "654280156139",
+            appId: "1:654280156139:web:d900ce326306e7cf73afae"
+        };
+        const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'neerada-app-local';
+
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
+        }
+
+        let currentUser = null;
+
+        // Firestore Paths (Strict format)
+        const stateDocRef = () => doc(db, 'artifacts', currentAppId, 'public', 'data', 'tracker', 'state');
+        const settingsDocRef = () => doc(db, 'artifacts', currentAppId, 'public', 'data', 'tracker', 'settings');
+
+        // Initialize Authentication
+        const initAuth = async () => {
+            if (!auth) return;
+            try {
+                // Connecting specifically to your custom Firebase project via Anonymous Auth
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.error("Auth Error:", err);
+                hideLoader(); // Show UI even if offline
+            }
+        };
+
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                startDataListeners();
+            }
+        });
+
+        // --- 3. Data Sync & Logic ---
+
+        function generateFreshState() {
+            const newState = {};
+            for (const [campus, grades] of Object.entries(SCHOOL_STRUCTURE)) {
+                newState[campus] = {};
+                for (const [grade, data] of Object.entries(grades)) {
+                    data.classes.forEach(className => {
+                        newState[campus][className] = {};
+                        data.subjects.forEach(subject => {
+                            newState[campus][className][subject] = false;
+                        });
+                    });
+                }
+            }
+            return newState;
+        }
+
+        async function saveStateToFirebase(newState) {
+            if (!currentUser) return;
+            try {
+                await setDoc(stateDocRef(), { state: newState }, { merge: true });
+            } catch (e) {
+                console.error("Error saving state:", e);
+            }
+        }
+
+        function startDataListeners() {
+            // Listen to Logo/Settings
+            onSnapshot(settingsDocRef(), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().logoData) {
+                    applyLogoToUI(docSnap.data().logoData);
+                }
+            }, (err) => console.error("Settings snapshot error:", err));
+
+            // Listen to Main Data State
+            onSnapshot(stateDocRef(), (docSnap) => {
+                let needsSync = false;
+                
+                if (docSnap.exists() && docSnap.data().state) {
+                    appState = docSnap.data().state;
+                    
+                    // Auto-sync missing structures if we added new campuses/classes in the code
+                    for (const [campus, grades] of Object.entries(SCHOOL_STRUCTURE)) {
+                        if (!appState[campus]) { appState[campus] = {}; needsSync = true; }
+                        for (const [grade, data] of Object.entries(grades)) {
+                            data.classes.forEach(className => {
+                                if (!appState[campus][className]) {
+                                    appState[campus][className] = {};
+                                    needsSync = true;
+                                }
+                                data.subjects.forEach(subject => {
+                                    if (typeof appState[campus][className][subject] === 'undefined') {
+                                        appState[campus][className][subject] = false;
+                                        needsSync = true;
+                                    }
+                                });
+                            });
+                        }
+                    }
+                } else {
+                    appState = generateFreshState();
+                    needsSync = true;
+                }
+
+                if (needsSync) saveStateToFirebase(appState);
+                
+                hideLoader();
+                renderAll();
+
+            }, (error) => {
+                console.error("Data snapshot error:", error);
+                hideLoader();
+            });
+        }
+
+        function hideLoader() {
+            const overlay = document.getElementById('loadingOverlay');
+            const main = document.getElementById('mainContent');
+            if (overlay && !overlay.classList.contains('hidden')) {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    main.classList.remove('hidden');
+                    main.style.opacity = '1';
+                }, 300);
+            }
+        }
+
+        // --- 4. Global Action Handlers ---
+        // Attached to window to be accessible from inline HTML onclick handlers
+
+        window.toggleSubject = (campus, className, subject) => {
+            if (!appState) return;
+            appState[campus][className][subject] = !appState[campus][className][subject];
+            saveStateToFirebase(appState);
+            // Optmistic UI update
+            renderClasses();
+            renderPendingList();
+        };
+
+        window.markClassAll = (campus, className, status) => {
+            if (!appState) return;
+            const grade = className.substring(0, 2);
+            const subjects = SCHOOL_STRUCTURE[campus][grade].subjects;
+            subjects.forEach(subject => {
+                appState[campus][className][subject] = status;
+            });
+            saveStateToFirebase(appState);
+            renderClasses();
+            renderPendingList();
+        };
+
+        window.resetAllData = () => {
+            const modal = document.createElement('div');
+            modal.className = "fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center fade-in";
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                        <i class="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Reset All Data?</h3>
+                    <p class="text-sm text-slate-500 mb-6">Are you sure you want to reset all tracking data across all campuses? This cannot be undone.</p>
+                    <div class="flex justify-center space-x-3">
+                        <button id="cancelResetBtn" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition">Cancel</button>
+                        <button id="confirmResetBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Yes, Reset</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            document.getElementById('cancelResetBtn').onclick = () => modal.remove();
+            document.getElementById('confirmResetBtn').onclick = () => {
+                appState = generateFreshState();
+                saveStateToFirebase(appState);
+                modal.remove();
+            };
+        };
+
+        window.handleLogoUpload = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Size limit (~1MB to fit nicely in a Firestore document)
+            if (file.size > 1000000) {
+                alert("File is too large. Please upload an image under 1MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Data = e.target.result;
+                if (!currentUser) return;
+                try {
+                    await setDoc(settingsDocRef(), { logoData: base64Data }, { merge: true });
+                } catch (err) {
+                    console.error("Error saving logo:", err);
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function applyLogoToUI(base64Data) {
+            const appLogo = document.getElementById('appLogo');
+            const appIcon = document.getElementById('appIcon');
+            
+            // UI Header
+            appLogo.src = base64Data;
+            appLogo.classList.remove('hidden');
+            appIcon.classList.add('hidden');
+
+            // Metadata updates (Favicon & Apple Touch)
+            document.getElementById('dynamic-favicon').href = base64Data;
+            document.getElementById('dynamic-apple-icon').href = base64Data;
+        }
+
+        // --- 5. UI Rendering Functions ---
+
+        function renderAll() {
+            if (!appState) return;
+            renderCampusTabs();
+            renderTabs();
+            renderClasses();
+            renderPendingList();
+        }
+
+        function renderCampusTabs() {
+            const container = document.getElementById('campusTabs');
+            container.innerHTML = '';
+            
+            Object.keys(SCHOOL_STRUCTURE).forEach(campus => {
+                const btn = document.createElement('button');
+                btn.className = `flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all ${
+                    activeCampus === campus 
+                    ? 'bg-indigo-600 text-white shadow-md' 
+                    : 'bg-transparent text-slate-600 hover:bg-slate-300 hover:text-slate-900'
+                }`;
+                btn.innerHTML = `<i class="fa-solid fa-school mr-2"></i>${campus} Campus`;
+                btn.onclick = () => {
+                    activeCampus = campus;
+                    activeGrade = 'P1'; // Reset to P1 when switching campus
+                    renderAll();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('gradeTabs');
+            tabsContainer.innerHTML = '';
+            
+            Object.keys(SCHOOL_STRUCTURE[activeCampus]).forEach(grade => {
+                const btn = document.createElement('button');
+                btn.className = `flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+                    activeGrade === grade 
+                    ? 'bg-indigo-100 text-indigo-700 shadow-sm border border-indigo-200' 
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 border border-transparent'
+                }`;
+                btn.innerText = `Grade ${grade}`;
+                btn.onclick = () => {
+                    activeGrade = grade;
+                    renderTabs(); 
+                    renderClasses();
+                };
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function renderClasses() {
+            document.getElementById('activeGradeTitle').innerText = `${activeCampus}: ${activeGrade} Classes`;
+            
+            const container = document.getElementById('classCardsContainer');
+            container.innerHTML = '';
+            
+            const data = SCHOOL_STRUCTURE[activeCampus][activeGrade];
+            let gradeTotalSubjects = 0;
+            let gradeUploadedSubjects = 0;
+
+            data.classes.forEach(className => {
+                const classState = appState[activeCampus][className];
+                const subjects = data.subjects;
+                
+                let classUploadedCount = 0;
+                subjects.forEach(subj => {
+                    gradeTotalSubjects++;
+                    if(classState[subj]) {
+                        classUploadedCount++;
+                        gradeUploadedSubjects++;
+                    }
+                });
+
+                const isAllUploaded = classUploadedCount === subjects.length;
+
+                // Create Card
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-xl shadow-sm border ${isAllUploaded ? 'border-emerald-200' : 'border-slate-200'} overflow-hidden fade-in`;
+                
+                // Card Header
+                const header = document.createElement('div');
+                header.className = `px-5 py-3 border-b flex justify-between items-center ${isAllUploaded ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`;
+                
+                header.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-bold ${isAllUploaded ? 'text-emerald-700' : 'text-slate-800'}">${className}</h3>
+                        ${isAllUploaded 
+                            ? `<span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider"><i class="fa-solid fa-check mr-1"></i> Complete</span>` 
+                            : `<span class="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border shadow-sm">${classUploadedCount} / ${subjects.length} Uploaded</span>`
+                        }
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="window.markClassAll('${activeCampus}', '${className}', true)" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline">Check All</button>
+                        <span class="text-slate-300">|</span>
+                        <button onclick="window.markClassAll('${activeCampus}', '${className}', false)" class="text-xs font-bold text-slate-500 hover:text-slate-700 hover:underline">Uncheck All</button>
+                    </div>
+                `;
+                card.appendChild(header);
+
+                // Subjects Grid
+                const grid = document.createElement('div');
+                grid.className = "p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
+
+                subjects.forEach(subject => {
+                    const isChecked = classState[subject];
+                    const id = `cb_${activeCampus}_${className}_${subject.replace(/\s+/g, '')}`;
+
+                    const label = document.createElement('label');
+                    label.className = "flex items-center space-x-3 cursor-pointer group";
+                    
+                    label.innerHTML = `
+                        <div class="relative flex items-center">
+                            <input type="checkbox" id="${id}" class="checkbox-custom opacity-0 absolute h-5 w-5 cursor-pointer z-10" ${isChecked ? 'checked' : ''} onchange="window.toggleSubject('${activeCampus}', '${className}', '${subject}')">
+                            <div class="bg-white border-2 rounded-md border-slate-300 w-5 h-5 flex flex-shrink-0 justify-center items-center mr-2 focus-within:border-indigo-500 transition-colors group-hover:border-indigo-400">
+                                <svg class="hidden fill-current w-3 h-3 text-white pointer-events-none" version="1.1" viewBox="0 0 17 12" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="m25.576 11.414c0.56558 0.55188 0.56558 1.4439 0 1.9961l-9.404 9.176c-0.28213 0.27529-0.65247 0.41385-1.0228 0.41385-0.37034 0-0.74068-0.13855-1.0228-0.41385l-4.7019-4.588c-0.56584-0.55188-0.56584-1.4442 0-1.9961 0.56558-0.55214 1.4798-0.55214 2.0456 0l3.679 3.5899 8.3812-8.1779c0.56558-0.55214 1.4798-0.55214 2.0456 0z" transform="translate(-9 -11)" fill-rule="nonzero"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <span class="text-sm font-medium select-none ${isChecked ? 'text-slate-400 line-through' : 'text-slate-700'}">${subject}</span>
+                    `;
+                    grid.appendChild(label);
+                });
+
+                card.appendChild(grid);
+                container.appendChild(card);
+            });
+
+            // Update grade progress text
+            document.getElementById('gradeProgress').innerText = `${gradeUploadedSubjects} / ${gradeTotalSubjects} Subjects Uploaded`;
+        }
+
+        function renderPendingList() {
+            const container = document.getElementById('pendingListContainer');
+            container.innerHTML = '';
+
+            let totalPendingCount = 0;
+            let hasPending = false;
+
+            // Group pending by Campus -> Grade -> Class
+            for (const [campus, grades] of Object.entries(SCHOOL_STRUCTURE)) {
+                
+                let campusHtml = '';
+                let campusHasPending = false;
+
+                for (const [grade, data] of Object.entries(grades)) {
+                    
+                    data.classes.forEach(className => {
+                        const classState = appState[campus][className];
+                        const missingSubjects = [];
+
+                        data.subjects.forEach(subject => {
+                            if (!classState[subject]) {
+                                missingSubjects.push(subject);
+                                totalPendingCount++;
+                            }
+                        });
+
+                        if (missingSubjects.length > 0) {
+                            hasPending = true;
+                            campusHasPending = true;
+                            
+                            campusHtml += `
+                                <div class="mb-3 bg-white border border-red-100 rounded-lg overflow-hidden shadow-sm">
+                                    <div class="bg-red-50 text-red-800 font-bold px-3 py-2 text-sm border-b border-red-100 flex justify-between items-center">
+                                        <span>${className} <span class="text-xs font-normal text-red-600 opacity-70 ml-1">(${grade})</span></span>
+                                        <span class="text-xs bg-red-100 px-2 py-1 rounded text-red-700">${missingSubjects.length} missing</span>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="flex flex-wrap gap-2">
+                                            ${missingSubjects.map(sub => `<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-600 border border-red-200"><i class="fa-solid fa-xmark mr-1.5 opacity-70"></i>${sub}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                if (campusHasPending) {
+                    const campusSection = document.createElement('div');
+                    campusSection.className = "mb-6 last:mb-0";
+                    campusSection.innerHTML = `
+                        <h4 class="text-sm font-black text-indigo-800 bg-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-wider mb-3 flex items-center">
+                            <i class="fa-solid fa-location-dot mr-2"></i> ${campus} Campus
+                        </h4>
+                        ${campusHtml}
+                    `;
+                    container.appendChild(campusSection);
+                }
+            }
+
+            // Update counter in header
+            const counterElement = document.getElementById('totalPendingCount');
+            counterElement.innerText = `${totalPendingCount} Pending`;
+            
+            if(totalPendingCount === 0) {
+                 counterElement.className = "bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full";
+            } else {
+                 counterElement.className = "bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse";
+            }
+
+            // Empty state
+            if (!hasPending) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-8 space-y-4">
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-2 shadow-inner">
+                            <i class="fa-solid fa-check-double text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">All Campuses Caught Up!</h3>
+                            <p class="text-sm text-slate-500 mt-1">Every subject for all classes in both campuses has been uploaded.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+    </script>
+</body>
+</html>
